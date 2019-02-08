@@ -248,32 +248,35 @@
 					%>
 				</select>
 				<div id="botonesAdd" name="botonesAdd">
-				<p>
-					<button type="submit" onclick="next('S')" id="btnContinuar">Continuar</button>
-					<button type="reset" id="btnContinuarBorrar">Borrar</button>
-					</div>
+					<p>
+						<button type="submit" onclick="next('S')" id="btnContinuar">Continuar</button>
+						<button type="reset" id="btnContinuarBorrar">Borrar</button>
+				</div>
 				<div name="divAddUser" id="divAddUser" class="divAddUser">
 					<p>
 						<label>Selecciona los usuarios que deben pagar la factura
 						</label>
 					<p>
-					
-							<%
-							out.println("<table border='1px' width='100%' class='paleBlueRows'>");
-							out.println(
-									"<thead><tr><th>Nombre</th><th>Selecciona</th></tr></thead>");
-								if (request.getAttribute("listaUser") != null) {
-									out.pr
-										List<User> listaUser = (List<User>) request.getAttribute("listaUser");
-										for (User user : listaUser) {
-											out.print("<option value='" + user.getName() + "'>" + user.getName() + "</option>");
-										}
-									}
-							%>
 
-			
-						<p>
-				 <input type="hidden" name="continuar" id="continuar">
+						<%
+							out.println("<table border='1px' width='100%' class='paleBlueRows'>");
+							out.println("<thead><tr><th>Nombre</th><th>Selecciona</th></tr></thead>");
+								if (request.getAttribute("listaUser") != null) {
+									List<User> listaUser = (List<User>) request.getAttribute("listaUser");
+									int i = 0;
+									for (User user : listaUser) {
+										String checkUser = "<td><input type='checkbox'name='checkUser" + i + "' id='idCheckUser" + i
+												+ "' value='U@@" + user.getName() + "' /></td>";
+										out.print("<tr><td>" + user.getName() + "</td>" + checkUser + "</tr>");
+										i++;
+									}
+
+								}
+							out.print("</table>");
+						%>
+					
+					<p>
+						<input type="hidden" name="continuar" id="continuar">
 						<button type="submit" onclick="next('N')">Aceptar</button>
 						<button type="submit" onclick="next('B')">Cancelar</button>
 			</form>

@@ -3,6 +3,7 @@ package org.java.login.controller;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -81,11 +82,22 @@ public class WebController {
 					Date fecFin = new SimpleDateFormat("yyyy-MM-dd").parse((String) requestParams.get("addFecFin"));
 					double importe = Double.parseDouble(requestParams.get("addImporte"));
 					int estado = requestParams.get("addEstado").equals("S") ? 1 : 0;
-					model = creaNuevaFactura(model, fac, fecIni, fecFin, importe, estado);
+					List<String> userList= new ArrayList<>();
+					for(String param : requestParams.values()) {
+						if(param.startsWith("U@@")) {
+							userList.add(param.substring(3));
+						}
+					}
+					if(userList.isEmpty()) {
+						throw new Exception("Ningun usuario declarado");
+					}
+					
+					model = creaNuevaFactura(model, fac, fecIni, fecFin, importe, estado,userList);
 					model.addAttribute("ventana", "0");
 				} catch (Exception e) {
-					e.printStackTrace();
-					model.addAttribute("ventana", "1");
+					model.addAttribute("logUser", true);
+					model.addAttribute("respuesta", e.getMessage());
+					model.addAttribute("ventana", "0");
 					model.addAttribute("addTipo", requestParams.get("addTipo"));
 					model.addAttribute("addFecIni", requestParams.get("addFecIni"));
 					model.addAttribute("addFecFin", requestParams.get("addFecFin"));
@@ -239,14 +251,16 @@ public class WebController {
 	 * @param fecFin
 	 * @param importe
 	 * @param estado
+	 * @param userList 
 	 * @return
 	 * @throws Exception
 	 */
-	private Model creaNuevaFactura(Model model, String fac, Date fecIni, Date fecFin, double importe, int estado)
+	private Model creaNuevaFactura(Model model, String fac, Date fecIni, Date fecFin, double importe, int estado, List<String> userList)
 			throws Exception {
 		model.addAttribute("logUser", true);
 		if (mainService.validarFechas(fecIni, fecFin)) {
-			mainService.crearFactura(fac, fecIni, fecFin, importe, estado);
+			Factura fact =mainService.crearFactura(fac, fecIni, fecFin, importe, estado);
+			mainService.crearDetFac(fact, userList);
 			model.addAttribute("respuesta", "El registro ha sido creado correctamente");
 		} else {
 			throw new Exception();

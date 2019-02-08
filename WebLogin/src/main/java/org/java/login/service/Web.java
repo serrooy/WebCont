@@ -5,10 +5,12 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
+import org.java.login.model.DetFac;
 import org.java.login.model.Factura;
 import org.java.login.model.LogLine;
+import org.java.login.model.User;
+import org.java.login.repository.DetFacDao;
 import org.java.login.repository.FacturaDao;
 import org.java.login.repository.LogLineDao;
 import org.java.login.repository.UserDao;
@@ -26,6 +28,9 @@ public class Web {
 
 	@Autowired
 	UserDao userDao;
+
+	@Autowired
+	DetFacDao detFacDao;
 
 	/**
 	 * Constructor
@@ -93,16 +98,25 @@ public class Web {
 	 * @param importe
 	 * @param estado
 	 */
-	public void crearFactura(String fac, Date fecIni, Date fecFin, double importe, int estado) {
+	public Factura crearFactura(String fac, Date fecIni, Date fecFin, double importe, int estado) {
 		Factura f = new Factura();
 		f.setFactura(fac);
 		f.setEstado(estado);
 		f.setFecFin(fecFin);
 		f.setFecIni(fecIni);
 		f.setImporte(importe);
-		facturaDao.save(f);
+		return facturaDao.save(f);
+
 	}
 
+	/**
+	 * 
+	 * @param fac
+	 * @param estado
+	 * @param fecIni
+	 * @param fecFin
+	 * @return
+	 */
 	public List<Factura> buscarFactura(String fac, Integer estado, Date fecIni, Date fecFin) {
 		List<Factura> out = new ArrayList<>();
 
@@ -131,35 +145,35 @@ public class Web {
 		if (estado != null) {
 			outEstado = facturaDao.findByestado(estado);
 		}
-		
+
 		for (Factura res : outFac) {
 			boolean all1 = false;
 			boolean all2 = false;
 			boolean all3 = false;
 			Long id = res.getId();
-			
-			//Estado
+
+			// Estado
 			if (estado != null) {
 				all1 = find(id, outEstado);
-			}else {
-				all1=true;
+			} else {
+				all1 = true;
 			}
-			
-			//fec ini
+
+			// fec ini
 			if (fecIni != null) {
 				all2 = find(id, outFecIni);
-			}else {
-				all2=true;
+			} else {
+				all2 = true;
 			}
-			
-			//fec Fin
+
+			// fec Fin
 			if (fecFin != null) {
 				all3 = find(id, outFecFin);
-			}else {
-				all3=true;
+			} else {
+				all3 = true;
 			}
-			
-			if(all1 && all2 && all3) {
+
+			if (all1 && all2 && all3) {
 				out.add(res);
 			}
 		}
@@ -167,6 +181,12 @@ public class Web {
 		return out;
 	}
 
+	/**
+	 * 
+	 * @param id
+	 * @param lista
+	 * @return
+	 */
 	private boolean find(Long id, List<Factura> lista) {
 
 		for (Factura f : lista) {
@@ -177,17 +197,38 @@ public class Web {
 
 		return false;
 	}
-	
-	public void deleteFactura(String id) {	
+
+	/**
+	 * 
+	 * @param id
+	 */
+	public void deleteFactura(String id) {
 		facturaDao.deleteById(Long.parseLong(id.substring(3)));
 	}
-	
+
+	/**
+	 * 
+	 * @param id
+	 */
 	public void pagar(String id) {
 		Long index = Long.parseLong(id.substring(3));
-		Factura factura  = facturaDao.findById(index).get();
-		if(factura!=null) {
+		Factura factura = facturaDao.findById(index).get();
+		if (factura != null) {
 			factura.setEstado(1);
 			facturaDao.save(factura);
+		}
+	}
+
+	public void crearDetFac(Factura fac, List<String> listUser) {
+		for (String user : listUser) {
+			DetFac detalle = new DetFac();
+			User usuario = userDao.findByUserLike(user);
+			if (usuario != null) {
+				detalle.setIdFac(fac.getId());
+				detalle.setIdUser(usuario.getId());
+				detalle.setEstado(0);
+				detFacDao.save(detalle);
+			}
 		}
 	}
 

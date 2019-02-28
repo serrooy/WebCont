@@ -5,8 +5,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import org.java.login.model.DetFac;
+import org.java.login.model.DetUser;
 import org.java.login.model.Factura;
 import org.java.login.model.LogLine;
 import org.java.login.model.User;
@@ -15,6 +17,7 @@ import org.java.login.repository.FacturaDao;
 import org.java.login.repository.LogLineDao;
 import org.java.login.repository.UserDao;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.ListFactoryBean;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -205,6 +208,13 @@ public class Web {
 	public void deleteFactura(String id) {
 		facturaDao.deleteById(Long.parseLong(id.substring(3)));
 	}
+	/**
+	 * 
+	 * @param id
+	 */
+	public void deleteFactura(Long id) {
+		facturaDao.deleteById(id);
+	}
 
 	/**
 	 * 
@@ -219,17 +229,119 @@ public class Web {
 		}
 	}
 
-	public void crearDetFac(Factura fac, List<String> listUser) {
+	/**
+	 * 
+	 * @param fac
+	 * @param listUser
+	 * @param estado 
+	 */
+	public void crearDetFac(Factura fac, List<String> listUser, int estado) {
 		for (String user : listUser) {
 			DetFac detalle = new DetFac();
 			User usuario = userDao.findByUserLike(user);
 			if (usuario != null) {
 				detalle.setIdFac(fac.getId());
 				detalle.setIdUser(usuario.getId());
-				detalle.setEstado(0);
+				detalle.setEstado(estado);
 				detFacDao.save(detalle);
 			}
 		}
+	}
+
+	/**
+	 * 
+	 * @param id
+	 * @return
+	 */
+	public Factura getFacturaById(Long id) {
+		return facturaDao.findById(id).get();
+	}
+
+	/**
+	 * 
+	 * @param fac
+	 * @return
+	 */
+	public List<DetUser> getDetFactura(Factura fac) {
+		List<DetUser> out = new ArrayList<>();
+		List<DetFac> usuarios = detFacDao.findByIdFac(fac.getId());
+		for (DetFac u : usuarios) {
+			User user = userDao.findById(u.getIdUser()).get();
+			out.add(new DetUser(user.getName(), u.getEstado()));
+		}
+		return out;
+	}
+
+	/**
+	 * Cambia el estado de un usuario a Factura Pagada
+	 * @param userName
+	 * @param idFac
+	 * @return
+	 */
+	public boolean pagarFacUser(String userName, Long idFac) {
+
+		User user = userDao.findByUserLike(userName);
+		if (user == null) {
+			return false;
+		}
+
+		List<DetFac> listUser = detFacDao.findByIdUserAndIdFac(user.getId(), idFac);
+		if (listUser == null || listUser.isEmpty()) {
+			return false;
+		}
+		DetFac facMod = listUser.get(0);
+		facMod.setEstado(1);
+		detFacDao.save(facMod);
+
+		return true;
+	}
+	
+	/**
+	 * Elimina un usuario de una factura
+	 * @param userName
+	 * @param idFac
+	 * @return
+	 */
+	public boolean eliminarFacUser(String userName, Long idFac) {
+
+		User user = userDao.findByUserLike(userName);
+		if (user == null) {
+			return false;
+		}
+
+		List<DetFac> listUser = detFacDao.findByIdUserAndIdFac(user.getId(), idFac);
+		if (listUser == null || listUser.isEmpty()) {
+			return false;
+		}
+		 detFacDao.delete(listUser.get(0));
+
+		return true;
+	}
+	
+	public boolean contorlPagosTotal(Long idFac) {
+
+		List<DetFac> listUser = detFacDao.findByIdFac(idFac);
+		if (listUser == null || listUser.isEmpty()) {
+			return false;
+		}
+		boolean totalPay=true;
+		for(DetFac user : listUser) {
+			if(user.getEstado()==0) {
+				totalPay=false;
+				break;
+			}
+		}
+		
+		if(totalPay) {
+			Optional<Factura> listFac = facturaDao.findById(idFac);
+			if(listFac.get()!=null) {
+				Factura fac = listFac.get();
+				fac.setEstado(1);
+				facturaDao.save(fac);
+			}
+		}
+
+		return totalPay;
 	}
 
 }

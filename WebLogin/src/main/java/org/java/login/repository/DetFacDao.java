@@ -9,9 +9,11 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DetFacDao extends CrudRepository<DetFac, Long> {
    
-    public List<DetFac> findByIdFac(int id);
+    public List<DetFac> findByIdFac(Long long1);
     
-    public List<DetFac> findByIdUser(int id);
+    public List<DetFac> findByIdUser(Long id);
+    
+    public List<DetFac> findByIdUserAndIdFac(Long idUser,Long idFac);
 
    
 }

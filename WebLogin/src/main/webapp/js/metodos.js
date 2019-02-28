@@ -143,14 +143,27 @@ function getLoadCon(tipoFac){
 		
 }
 
-function changeValue(valor){
+function changeValue(valor,vFac){
 	document.getElementById("inputCon").value =valor;
+	if(vFac!=''){
+		document.getElementById("idFac").value = vFac;
+	}
 	document.getElementById("utipoFac").value = document.getElementById("idConTipo").value;
 	document.getElementById("ufecIni").value = document.getElementById("idConFecIni").value;
 	document.getElementById("ufecFin").value = document.getElementById("idConFecFin").value;
 	document.getElementById("uestado").value = document.getElementById("idConEstado").value;
 }
 
+function changeDetValue(valor1,valor,vUser){
+	document.getElementById("inputDetCon").value =valor;
+	document.getElementById("inputCon").value =valor1;
+	document.getElementById("usuario").value =vUser;
+}
+
 function next(con){
 	document.getElementById("continuar").value=con;
+}
+
+function setCancel(){
+	document.getElementById("cancelar").value="cancel";
 }

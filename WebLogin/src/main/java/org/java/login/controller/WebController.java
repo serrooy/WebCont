@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.java.login.model.DetUser;
 import org.java.login.model.Factura;
 import org.java.login.service.Admin;
 import org.java.login.service.Web;
@@ -63,36 +64,38 @@ public class WebController {
 		} else if (requestParams.get(LOG_USU) != null) {
 			String logUsu = requestParams.get(LOG_USU);
 			model = getLogUsu(logUsu, model);
-
+		} else if (requestParams.get("cancelar") != null && requestParams.get("cancelar").equals("cancel")) {
+			model.addAttribute("logUser", true);
+			model.addAttribute("ventana", "2");
 			// add Factura
 		} else if (requestParams.get("addTipo") != null) {
 			if (requestParams.get("continuar").equals("S")) {
 				model.addAttribute("logUser", true);
 				model.addAttribute("ventana", "0.1");
-				model.addAttribute("listaUser",mainAdmin.getAllUser());
+				model.addAttribute("listaUser", mainAdmin.getAllUser());
 				model.addAttribute("addTipo", requestParams.get("addTipo"));
 				model.addAttribute("addFecIni", requestParams.get("addFecIni"));
 				model.addAttribute("addFecFin", requestParams.get("addFecFin"));
 				model.addAttribute("addImporte", requestParams.get("addImporte"));
 				model.addAttribute("addEstado", requestParams.get("addEstado"));
-			} else if(requestParams.get("continuar").equals("N")){
+			} else if (requestParams.get("continuar").equals("N")) {
 				try {
 					String fac = requestParams.get("addTipo");
 					Date fecIni = new SimpleDateFormat("yyyy-MM-dd").parse((String) requestParams.get("addFecIni"));
 					Date fecFin = new SimpleDateFormat("yyyy-MM-dd").parse((String) requestParams.get("addFecFin"));
 					double importe = Double.parseDouble(requestParams.get("addImporte"));
 					int estado = requestParams.get("addEstado").equals("S") ? 1 : 0;
-					List<String> userList= new ArrayList<>();
-					for(String param : requestParams.values()) {
-						if(param.startsWith("U@@")) {
+					List<String> userList = new ArrayList<>();
+					for (String param : requestParams.values()) {
+						if (param.startsWith("U@@")) {
 							userList.add(param.substring(3));
 						}
 					}
-					if(userList.isEmpty()) {
+					if (userList.isEmpty()) {
 						throw new Exception("Ningun usuario declarado");
 					}
-					
-					model = creaNuevaFactura(model, fac, fecIni, fecFin, importe, estado,userList);
+
+					model = creaNuevaFactura(model, fac, fecIni, fecFin, importe, estado, userList);
 					model.addAttribute("ventana", "0");
 				} catch (Exception e) {
 					model.addAttribute("logUser", true);
@@ -105,7 +108,7 @@ public class WebController {
 					model.addAttribute("addEstado", requestParams.get("addEstado"));
 
 				}
-			}else {
+			} else {
 				model.addAttribute("logUser", true);
 			}
 			// consulta factura
@@ -123,10 +126,6 @@ public class WebController {
 						if (id.startsWith("D@@")) {
 							eliminar(id);
 						}
-						if (id.startsWith("P@@")) {
-							pagar(id);
-						}
-
 					}
 					model.addAttribute("respuesta", "Los registro han sido modificado correctamente");
 					model.addAttribute("ventana", "0");
@@ -137,14 +136,45 @@ public class WebController {
 				// Ir a detalles
 			} else if (accion.equals("C")) {
 				model.addAttribute("logUser", true);
+				String idFac = null;
+				if (requestParams.get("inputDetCon") != null) {
+					idFac = requestParams.get("uidFac");
+					if (requestParams.get("inputDetCon").equals("D")) {
+						delUserFac(requestParams.get("usuario"), idFac);
+					} else if (requestParams.get("inputDetCon").equals("P")) {
+						payUserFac(requestParams.get("usuario"), idFac);
+					}
+
+					model.addAttribute("uidFac", requestParams.get("uidFac"));
+				} else {
+					idFac = requestParams.get("idFac");
+					model.addAttribute("uidFac", requestParams.get("idFac"));
+				}
+
+				// Controlamos el estado de la factura
+				if (controlPagados(idFac)) {
+					if (requestParams.get("inputDetCon") == null || (!requestParams.get("inputDetCon").equals("D")
+							&& !requestParams.get("inputDetCon").equals("P")))
+						model.addAttribute("onlyRead", 1);// true
+				} else {
+					model.addAttribute("onlyRead", 0); // false
+				}
+
 				model.addAttribute("ufecIni", requestParams.get("ufecIni"));
 				model.addAttribute("ufecFin", requestParams.get("ufecFin"));
 				model.addAttribute("utipoFac", requestParams.get("utipoFac"));
 				model.addAttribute("uestado", requestParams.get("uestado"));
+				Factura fac = getFactura(idFac);
+				model.addAttribute("factura", fac);
+				model.addAttribute("listaUsuarios", getDetFactura(fac));
 
 				return "/detalles.jsp";
 				// volver de detalles
 			} else if (accion.equals("U")) {
+				if (requestParams.get("inputDetCon") != null && requestParams.get("inputDetCon").equals("D")) {
+					eliminar(requestParams.get("uidFac"));
+				}
+
 				if (requestParams.get("utipoFac") != null) {
 					requestParams.put("conTipo", requestParams.get("utipoFac"));
 
@@ -158,17 +188,29 @@ public class WebController {
 
 				}
 				if (requestParams.get("uestado") != null) {
-					requestParams.put("conEstado", requestParams.get("uestado"));
+					requestParams.put("conEstado", "T");
 
 				}
 
 				preFactura(model, requestParams);
 
 			}
-
 		}
-
 		return Constantes.INDEX;
+	}
+
+	private boolean controlPagados(String idFac) {
+		return mainService.contorlPagosTotal(Long.parseLong(idFac));
+
+	}
+
+	/**
+	 * 
+	 * @param idFac
+	 * @return
+	 */
+	private Factura getFactura(String idFac) {
+		return mainService.getFacturaById(Long.parseLong(idFac));
 	}
 
 	/**
@@ -229,18 +271,11 @@ public class WebController {
 	 * @throws Exception
 	 */
 	private void eliminar(String id) throws Exception {
-		mainService.deleteFactura(id);
-	}
-
-	/**
-	 * 
-	 * @param model
-	 * @param id
-	 * @return
-	 * @throws Exception
-	 */
-	private void pagar(String id) throws Exception {
-		mainService.pagar(id);
+		if (id.startsWith("D@@")) {
+			mainService.deleteFactura(id);
+		} else {
+			mainService.deleteFactura(Long.parseLong(id));
+		}
 	}
 
 	/**
@@ -251,16 +286,16 @@ public class WebController {
 	 * @param fecFin
 	 * @param importe
 	 * @param estado
-	 * @param userList 
+	 * @param userList
 	 * @return
 	 * @throws Exception
 	 */
-	private Model creaNuevaFactura(Model model, String fac, Date fecIni, Date fecFin, double importe, int estado, List<String> userList)
-			throws Exception {
+	private Model creaNuevaFactura(Model model, String fac, Date fecIni, Date fecFin, double importe, int estado,
+			List<String> userList) throws Exception {
 		model.addAttribute("logUser", true);
-		if (mainService.validarFechas(fecIni, fecFin)) {
-			Factura fact =mainService.crearFactura(fac, fecIni, fecFin, importe, estado);
-			mainService.crearDetFac(fact, userList);
+		if (mainService.validarFechas(fecIni, fecFin)) {// TODO
+			Factura fact = mainService.crearFactura(fac, fecIni, fecFin, importe, estado);
+			mainService.crearDetFac(fact, userList, estado);
 			model.addAttribute("respuesta", "El registro ha sido creado correctamente");
 		} else {
 			throw new Exception();
@@ -303,4 +338,25 @@ public class WebController {
 		return model;
 	}
 
+	/**
+	 * 
+	 * @param fac
+	 * @return
+	 */
+	private List<DetUser> getDetFactura(Factura fac) {
+		return mainService.getDetFactura(fac);
+	}
+
+	/**
+	 * 
+	 * @param fac
+	 * @return
+	 */
+	private boolean payUserFac(String userName, String idFac) {
+		return mainService.pagarFacUser(userName, Long.parseLong(idFac));
+	}
+
+	private boolean delUserFac(String userName, String idFac) {
+		return mainService.eliminarFacUser(userName, Long.parseLong(idFac));
+	}
 }
